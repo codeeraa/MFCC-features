@@ -4,12 +4,19 @@
 #include <vector>
 #include <cmath>
 
-//windowing with hamming method
-std::vector<double> hammingWindow(const std::vector<double>&frame) {
-    std::vector<double> windowed_frame(frame.size());
-    for (size_t i = 0; i < frame.size(); ++i) {
-        windowed_frame[i] = frame[i] * (0.54 - 0.46 * std::cos(2 * M_PI * i / (frame.size() - 1)));
+std::vector<std::vector<double>> hammingWindow(const std::vector<std::vector<double>>& frames) {
+    int frameSize = frames[0].size();
+    std::vector<double> window(frameSize);
+    for (int i = 0; i < frameSize; ++i) {
+        window[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (frameSize - 1));
     }
-    return windowed_frame;
+    std::vector<std::vector<double>> windowedFrames(frames.size(), std::vector<double>(frameSize));
+    for (size_t i = 0; i < frames.size(); ++i) {
+        for (int j = 0; j < frameSize; ++j) {
+            windowedFrames[i][j] = frames[i][j] * window[j];
+        }
+    }
+    return windowedFrames;
 }
+
 #endif 
