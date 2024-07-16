@@ -1,61 +1,55 @@
 #include <iostream>
 #include <vector>
-#include <sndfile.hh>
-#include "hamming_window.h"
+#include <cmath>
 #include "pre_emphasis.h"
-
-
-//using the sndfile library to generate vector data of audiofile
-std::vector<double> readAudioFile(const std::string& filename, int& sample_rate) {
-    SF_INFO sf_info;
-    SNDFILE* sndfile = sf_open(filename.c_str(), SFM_READ, &sf_info);
-    if (!sndfile) {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return {};
-    }
-
-    sample_rate = sf_info.samplerate;
-    std::vector<double> audio_data(sf_info.frames * sf_info.channels);
-    sf_readf_double(sndfile, audio_data.data(), sf_info.frames);
-    sf_close(sndfile);
-
-    return audio_data;
-}
-
-// windowing step using hamming window formula
-std::vector<std::vector<double>> frameSignal(const std::vector<double>& signal, int frame_length, int frame_step) {
-    std::vector<std::vector<double>> frames;
-    int num_frames = 1 + (signal.size() - frame_length) / frame_step;
-    for (int i = 0; i < num_frames; ++i) {
-        std::vector<double> frame(signal.begin() + i * frame_step, signal.begin() + i * frame_step + frame_length);
-        frames.push_back(applyHammingWindow(frame));  // applying hamming window to each frame
-    }
-    return frames;
-}
+#include "framing.h"
+#include "hamming_window.h"
+#include "fft.h"
+#include "mel_filter.h"
+#include "dct.h"
 
 int main() {
-    int sample_rate;
-    //load audio file
-    std::string filename = "audio_file.wav";
-    std::vector<double> audio_signal = readAudioFile(filename, sample_rate);
+    // generate dummy data
+    int sampleRate = 25000;
+    int duration = 1; // in seconds
+    std::vector<double> samples(sampleRate * duration);
+    double frequency = 240.0; 
 
-    if (audio_signal.empty()) {
-        std::cerr << "Failed to read audio data" << std::endl;
-        return 1;
+    for (int i = 0; i < samples.size(); ++i) {
+        samples[i] = std::sin(2.0 * M_PI * frequency * i / sampleRate);
     }
 
-    // pre-emphasis
-    std::vector<double> emphasized_signal = preEmphasis(audio_signal);
+    // mfcc parameter
+    double preEmphasisAlpha = 0.97;
+    int frameSize = 625; // 25 ms per frame
+    int frameShift = 250; // hop length (hop every 10 ms)
+    int numFilters = 40; // number of mel filter
+    int numCoeffs = 13;// number of mfcc standard for many speech processing
+    double fmin = 80.0; //lowest frequency to be included
+    double fmax = 7600.0; //set below the Nyquist frequency 
+
+    // pre emphasis
+    auto emphasizedSignal = preEmphasis(samples, preEmphasisAlpha);
 
     // framing
-    int frame_length = 625; // 25 ms
-    int frame_step = 250; // 10 ms hop size for overlap
+    auto frames = framing(emphasizedSignal, frameSize, frameShift);
 
-    auto frames = frameSignal(emphasized_signal, frame_length, frame_step);
+    // windowing
+    auto windowedFrames = hammingWindow(frames);
 
-    for (const auto& frame : frames) {
-        for (double sample : frame) {
-            std::cout << sample << " ";
+    // FFT
+    auto fftFrames = computeFFT(windowedFrames);
+
+    // mel filter bank
+    auto melSpectrogram = melFilterBank(fftFrames, sampleRate, numFilters, fmin, fmax);
+
+    // DCT
+    auto mfccs = computeDCT(melSpectrogram, numCoeffs);
+
+    // print mfcc
+    for (const auto& mfcc : mfccs) {
+        for (auto coeff : mfcc) {
+            std::cout << coeff << " ";
         }
         std::cout << std::endl;
     }
