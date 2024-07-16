@@ -1,0 +1,25 @@
+#ifndef MEL_FILTERBANK_H
+#define MEL_FILTERBANK_H
+
+#include <vector>
+#include <cmath>
+#include <Eigen/Dense>
+
+std::vector<std::vector<double>> melFilterBank(const std::vector<std::vector<std::complex<double>>>& fftFrames, double sampleRate, int numFilters, double fmin, double fmax) {
+    int frameSize = fftFrames[0].size();
+    Eigen::MatrixXd melFilterBank(numFilters, frameSize);
+
+    std::vector<std::vector<double>> melSpectrogram(fftFrames.size(), std::vector<double>(numFilters));
+    for (size_t i = 0; i < fftFrames.size(); ++i) {
+        Eigen::VectorXd powerSpectrum(frameSize);
+        for (int j = 0; j < frameSize; ++j) {
+            powerSpectrum[j] = std::norm(fftFrames[i][j]);
+        }
+        Eigen::VectorXd melSpectrum = melFilterBank * powerSpectrum;
+        for (int j = 0; j < numFilters; ++j) {
+            melSpectrogram[i][j] = melSpectrum[j];
+        }
+    }
+    return melSpectrogram;
+}
+#endif 
