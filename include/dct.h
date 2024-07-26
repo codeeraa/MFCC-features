@@ -3,22 +3,26 @@
 
 #include <vector>
 #include <cmath>
-#include <Eigen/Dense>
+#define M_PI 3.14159265358979323846
 
-std::vector<std::vector<double>> computeDCT(const std::vector<std::vector<double>>& melSpectrogram, int numCoeffs) {
+std::vector<std::vector<double>> applyDCT(const std::vector<std::vector<double>>& melSpectrogram, int n_mfcc, int dct_type) {
     int numFrames = melSpectrogram.size();
-    int numFilters = melSpectrogram[0].size();
-    Eigen::MatrixXd dctMatrix(numCoeffs, numFilters);
-
-    std::vector<std::vector<double>> mfccs(numFrames, std::vector<double>(numCoeffs));
+    int numMelFilters = melSpectrogram[0].size();
+    
+    std::vector<std::vector<double>> dctCoefficients(numFrames, std::vector<double>(n_mfcc, 0.0));
+    double factor = (dct_type == 2) ? 2.0 : 1.0;
+    
     for (int i = 0; i < numFrames; ++i) {
-        Eigen::VectorXd melSpectrum = Eigen::VectorXd::Map(&melSpectrogram[i][0], numFilters);
-        Eigen::VectorXd mfcc = dctMatrix * melSpectrum;
-        for (int j = 0; j < numCoeffs; ++j) {
-            mfccs[i][j] = mfcc[j];
+        for (int k = 0; k < n_mfcc; ++k) {
+            double sum = 0.0;
+            for (int n = 0; n < numMelFilters; ++n) {
+                sum += melSpectrogram[i][n] * std::cos(M_PI / numMelFilters * (n + 0.5) * k);
+            }
+            dctCoefficients[i][k] = factor * sum;
         }
     }
-    return mfccs;
+    
+    return dctCoefficients;
 }
 
-#endif 
+#endif // DCT_H
