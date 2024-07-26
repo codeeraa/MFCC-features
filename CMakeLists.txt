@@ -1,13 +1,23 @@
 cmake_minimum_required(VERSION 3.10)
-project(MFCC)
+project(mfcc_feature)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-find_package(FFTW REQUIRED)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(FFTW3 CONFIG REQUIRED)
 
-include_directories(${FFTW_INCLUDES})
-include_directories(${EIGEN3_INCLUDE_DIRS})
+find_package(FFTW3f CONFIG REQUIRED)
 
-add_executable(MFCC src/main.cpp src/pre_emphasis.h src/framing.h src/hamming_window.h src/fft.h src/mel_filterbank.h src/dct.h)
-target_link_libraries(MFCC fftw3 ${FFTW_LIBRARIES} Eigen3::Eigen)
+find_package(FFTW3l CONFIG REQUIRED)
+
+include_directories(include)
+
+set(SOURCE_FILES
+    src/main.cpp
+)
+
+add_executable(mfcc_feature ${SOURCE_FILES})
+
+target_link_libraries(mfcc_feature PRIVATE FFTW3::fftw3)
+target_link_libraries(mfcc_feature PRIVATE FFTW3::fftw3f)
+target_link_libraries(mfcc_feature PRIVATE FFTW3::fftw3l)
